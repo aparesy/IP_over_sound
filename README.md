@@ -1,54 +1,54 @@
 # IP over Sound
 
-通过声波在两台电脑之间传输 IP 数据包：本机 TUN 虚拟网卡上的 IP 包经 FSK 调制后由扬声器播放，对方麦克风录制后解调、成帧、校验并写回 TUN，实现“声波上的网络”。
+Transmission de paquets IP entre deux ordinateurs via des ondes sonores : les paquets IP issus de l’interface TUN locale sont modulés en FSK et joués par le haut‑parleur ; le microphone de la machine distante enregistre le signal, le démodule, reconstitue les trames, vérifie le CRC puis réinjecte les paquets IP dans son propre TUN — ce qui permet de réaliser un « réseau sur les ondes sonores ».
 
-## 架构概览
+## Aperçu de l’architecture
 
-- **TUN**：与内核交换 IP 包（读/写虚拟网卡）
-- **protocol**：帧封装/解封装（同步字 + 长度 + CRC）
-- **modem**：FSK 调制/解调（比特 ↔ 波形）
-- **audio**：PortAudio 声卡读/写
+- **TUN** : échange de paquets IP avec le noyau (lecture/écriture sur une interface réseau virtuelle).
+- **protocol** : encapsulation/décapsulation de trames (mot de synchronisation + longueur + CRC).
+- **modem** : modulation/démodulation FSK (bits ↔ forme d’onde).
+- **audio** : lecture/écriture audio via PortAudio.
 
-## 依赖
+## Dépendances
 
-- Linux（TUN 与 `linux/if_tun.h`）
-- PortAudio：`libportaudio-dev`（Ubuntu/Debian）
-- 编译：`gcc`，链接 `-lpthread -lm -lportaudio`
+- Linux (TUN et `linux/if_tun.h`)
+- PortAudio : `libportaudio-dev` (Ubuntu/Debian)
+- Compilation : `gcc`, avec liaison `-lpthread -lm -lportaudio`
 
-## 编译
+## Compilation
 
 ```bash
 make
 ```
 
-生成可执行文件 `ipo_sound`。
+Génère l’exécutable `ipo_sound`.
 
-## 运行
+## Exécution
 
-1. **创建并配置 TUN**（需 root）  
-   先运行一次程序让 TUN 被创建，或手动创建：
+1. **Créer et configurer l’interface TUN** (nécessite root)  
+   Lancer une première fois le programme pour que l’interface TUN soit créée, ou la créer manuellement :
    ```bash
    sudo ip tuntap add dev tun0 mode tun
    ```
-   然后配置 IP 与路由：
+   Puis configurer l’IP et la route :
    ```bash
    sudo ./scripts/setup_tun.sh tun0 10.0.0.1
    ```
 
-2. **启动程序**
+2. **Lancer le programme**
    ```bash
    sudo ./ipo_sound [tun_name]
    ```
-   默认使用 `tun0`，可选参数指定 TUN 设备名。
+   Par défaut, `tun0` est utilisée ; un argument optionnel permet de spécifier le nom de l’interface TUN.
 
-3. **对端**  
-   另一台机器同样配置 TUN（如 `10.0.0.2/24`），运行 `ipo_sound`，两台机即可通过 10.0.0.0/24 网段经声波互通（需扬声器与麦克风相对、音量合适）。
+3. **Machine distante**  
+   Sur une autre machine, configurer également TUN (par exemple `10.0.0.2/24`), lancer `ipo_sound`, et les deux hôtes peuvent communiquer sur le réseau 10.0.0.0/24 via les ondes sonores (haut‑parleur et micro doivent être en vis‑à‑vis, avec un volume adapté).
 
-## 注意事项
+## Remarques
 
-- 需要 **root** 或 `CAP_NET_ADMIN` 才能操作 TUN。
-- 当前为**半双工**演示：收发可同时进行，但同一时刻同一信道，噪声大时可能丢包。
-- 采样率、FSK 频率、帧格式等见 `include/common.h`。
+- Les droits **root** ou la capacité `CAP_NET_ADMIN` sont nécessaires pour manipuler TUN.
+- La démonstration est **semi‑duplex** : émission et réception peuvent se chevaucher, mais sur un même canal un environnement bruyant peut entraîner des pertes.
+- La fréquence d’échantillonnage, les fréquences FSK et le format de trame sont définis dans `include/common.h`.
 
 ---
 
