@@ -1,7 +1,8 @@
 /**
- * utils.h - 工具函数接口（CRC 校验、调试打印等）
+ * utils.h - Interface des fonctions utilitaires (CRC, impression de debug, etc.).
  *
- * 供 protocol、main 等模块调用，不依赖具体硬件。
+ * Utilisé par les modules protocol, main, etc., sans dépendance matérielle
+ * spécifique.
  */
 
 #ifndef UTILS_H
@@ -11,18 +12,19 @@
 #include <stddef.h>
 
 /**
- * 计算 CRC-16 (CCITT)，用于帧尾校验
- * @param data 待校验数据指针
- * @param len  数据长度（字节）
- * @return     16 位 CRC 值
+ * Calcule un CRC‑16 (CCITT), utilisé pour la vérification en fin de trame.
+ * @param data pointeur vers les données à vérifier
+ * @param len  longueur des données (en octets)
+ * @return     valeur CRC 16 bits
  */
 uint16_t crc16(const uint8_t *data, size_t len);
 
 /**
- * 调试打印：以十六进制打印一段数据（可选，用于排查帧内容）
- * @param tag  前缀字符串，如 "TX" / "RX"
- * @param data 数据指针
- * @param len  长度
+ * Affichage de débogage : imprime une zone mémoire en hexadécimal (optionnel,
+ * utile pour inspecter le contenu des trames).
+ * @param tag  chaîne préfixe, par ex. "TX" / "RX"
+ * @param data pointeur vers les données
+ * @param len  longueur en octets
  */
 void debug_hex_dump(const char *tag, const uint8_t *data, size_t len);
 

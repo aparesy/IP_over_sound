@@ -1,8 +1,11 @@
 /**
- * protocol.c - 帧封装与解析实现
+ * protocol.c - Implémentation de l’encapsulation et du décapsulage de trames.
  *
- * 帧格式: [SYNC_BYTE x SYNC_LEN][长度 2 字节 大端][载荷][CRC16 2 字节 大端]
- * 长度字段 = 载荷字节数（不含头与 CRC），便于接收端分配缓冲区并校验 CRC。
+ * Format de trame :
+ *   [SYNC_BYTE répété SYNC_LEN fois][champ longueur 2 octets big‑endian]
+ *   [charge utile][CRC16 2 octets big‑endian].
+ * Le champ longueur est le nombre d’octets de charge utile (hors en‑tête et CRC),
+ * ce qui facilite l’allocation côté réception et la vérification du CRC.
  */
 
 #include "protocol.h"
@@ -10,15 +13,13 @@
 #include <string.h>
 
 /**
- * 封装：同步字 + 长度(大端) + 载荷 + CRC16(大端)
+ * Encapsulation : SYNC + longueur (big‑endian) + charge utile + CRC16 (big‑endian).
+ *
+ * @param payload       charge utile, c’est‑à‑dire les données du paquet IP à encapsuler
+ * @param payload_len   longueur de la charge utile
+ * @param frame_out     tampon de sortie pour la trame
+ * @return              longueur totale de la trame produite
  */
- /**
-  * 封装：同步字 + 长度(大端) + 载荷 + CRC16(大端)
-  * @param payload 载荷，即要封装的IP包数据
-  * @param payload_len 载荷长度
-  * @param frame_out 输出帧缓冲区
-  * @return 输出帧的长度
-  */
 int protocol_encapsulate(const uint8_t *payload, int payload_len, uint8_t *frame_out)
 {
     uint16_t crc;
@@ -27,18 +28,18 @@ int protocol_encapsulate(const uint8_t *payload, int payload_len, uint8_t *frame
     if (!payload || !frame_out || payload_len <= 0 || payload_len > MAX_FRAME_PAYLOAD)
         return 0;
 
-    /* 1. 同步字 */
+    /* 1. Mot(s) de synchronisation. */
     for (i = 0; i < SYNC_LEN; i++)
-        frame_out[i] = SYNC_BYTE; /** 这个是*(frame_out + i)的简写,改的是内容 */
+        frame_out[i] = SYNC_BYTE; /** Équivalent à *(frame_out + i), modifie le contenu. */
 
-    /* 2. 长度（大端） */
-    frame_out[SYNC_LEN]     = (payload_len >> 8) & 0xFF; /** 取高位+位与掩码0xFF */
-    frame_out[SYNC_LEN + 1] = payload_len & 0xFF; /** 取低位+位与掩码0xFF */
+    /* 2. Champ longueur (big‑endian). */
+    frame_out[SYNC_LEN]     = (payload_len >> 8) & 0xFF; /** Octet de poids fort masqué avec 0xFF. */
+    frame_out[SYNC_LEN + 1] = payload_len & 0xFF;        /** Octet de poids faible masqué avec 0xFF. */
 
-    /* 3. 拷贝载荷 */
-    memcpy(frame_out + FRAME_HEADER_LEN, payload, payload_len); /** 拷贝载荷到帧缓冲区 ，从第4个字节开始，长度为payload_len*/
+    /* 3. Copie de la charge utile dans le tampon de trame. */
+    memcpy(frame_out + FRAME_HEADER_LEN, payload, payload_len); /** Copie à partir du 4ᵉ octet pour une longueur payload_len. */
 
-    /* 4. CRC：对「长度+载荷」计算，放在帧尾（大端） */
+    /* 4. CRC : calculé sur « longueur + charge utile », placé en fin de trame (big‑endian). */
     crc = crc16(frame_out + SYNC_LEN, LEN_FIELD_BYTES + payload_len);
     frame_out[FRAME_HEADER_LEN + payload_len]     = (crc >> 8) & 0xFF;
     frame_out[FRAME_HEADER_LEN + payload_len + 1] = crc & 0xFF;
@@ -47,12 +48,12 @@ int protocol_encapsulate(const uint8_t *payload, int payload_len, uint8_t *frame
 }
 
 /**
- * 解封装：校验 CRC 后取出载荷
- * @param frame 输入帧缓冲区
- * @param frame_len 帧长度
- * @param payload_out 输出载荷（IP 包）缓冲区
- * @param max_payload 缓冲区最大长度
- * @return 输出载荷的长度
+ * Décapsulation : vérifie le CRC puis extrait la charge utile.
+ * @param frame        tampon contenant une trame en entrée
+ * @param frame_len    longueur totale de la trame
+ * @param payload_out  tampon de sortie pour la charge utile (paquet IP)
+ * @param max_payload  taille maximale du tampon de sortie
+ * @return             longueur de la charge utile extraite, ou -1 en cas d’erreur
  */
 int protocol_decapsulate(const uint8_t *frame, int frame_len,
                          uint8_t *payload_out, int max_payload)
@@ -62,7 +63,7 @@ int protocol_decapsulate(const uint8_t *frame, int frame_len,
     if (!frame || !payload_out || frame_len < FRAME_HEADER_LEN + CRC_BYTES)
         return -1;
 
-    /* 长度（大端） */
+    /* Lecture du champ longueur (big‑endian). */
     len_u16 = (frame[SYNC_LEN] << 8) | frame[SYNC_LEN + 1];
     if (len_u16 <= 0 || len_u16 > MAX_FRAME_PAYLOAD)
         return -1;
@@ -71,20 +72,22 @@ int protocol_decapsulate(const uint8_t *frame, int frame_len,
     if (len_u16 > max_payload)
         return -1;
 
-    /* 校验 CRC：对「长度+载荷」计算，与帧尾两字节比较 */
+    /* Vérification du CRC : calcul sur « longueur + charge utile » et comparaison
+     * avec les deux octets en fin de trame. */
     crc_computed = crc16(frame + SYNC_LEN, LEN_FIELD_BYTES + len_u16);
     crc_stored   = (frame[FRAME_HEADER_LEN + len_u16] << 8)
                    | frame[FRAME_HEADER_LEN + len_u16 + 1];
     if (crc_computed != crc_stored)
-        return -1;  /* CRC 错误，丢弃 */
+        return -1;  /* CRC incorrect, trame rejetée. */
 
-    memcpy(payload_out, frame + FRAME_HEADER_LEN, len_u16); /** 拷贝载荷到输出缓冲区 ，从第4个字节开始，长度为len_u16*/
+    memcpy(payload_out, frame + FRAME_HEADER_LEN, len_u16); /** Copie de la charge utile dans le tampon de sortie (à partir du 4ᵉ octet). */
     return (int)len_u16;
 }
 
 /**
- * 在比特流中查找同步：连续 SYNC_LEN 字节的同步字（按比特匹配）
- * bits 中每字节 8 比特，高位在前。
+ * Recherche la synchronisation dans un flux de bits : SYNC_BYTE répété SYNC_LEN fois,
+ * apparié bit par bit.
+ * Dans `bits`, chaque octet contient 8 bits, le bit de poids fort en premier.
  */
 int protocol_find_sync(const uint8_t *bits, int nbits)
 {

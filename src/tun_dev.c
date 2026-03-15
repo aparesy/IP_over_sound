@@ -1,8 +1,9 @@
 /**
- * tun_dev.c - Linux TUN 虚拟网卡实现
+ * tun_dev.c - Implémentation de l’interface réseau virtuelle TUN sous Linux.
  *
- * 通过打开 /dev/net/tun 并 ioctl 配置为 TUN 设备，实现与内核交换 IP 包。
- * 需要 root 或 CAP_NET_ADMIN 权限。
+ * Ouvre /dev/net/tun et le configure via ioctl comme périphérique TUN pour
+ * échanger des paquets IP avec le noyau.
+ * Nécessite les droits root ou la capacité CAP_NET_ADMIN.
  */
 
 #include "tun_dev.h"
@@ -20,8 +21,8 @@
 #include <linux/if_tun.h>
 
 /**
- * 打开 TUN 设备
- * name 如 "tun0"，实际会创建或绑定该名称的 TUN 接口
+ * Ouvre un périphérique TUN.
+ * name, par ex. "tun0", permet de créer ou de rattacher cette interface TUN.
  */
 int tun_open(const char *name)
 {
@@ -35,7 +36,7 @@ int tun_open(const char *name)
     }
 
     memset(&ifr, 0, sizeof(ifr));
-    ifr.ifr_flags = IFF_TUN | IFF_NO_PI;  /* TUN 模式，不包含额外包头 */
+    ifr.ifr_flags = IFF_TUN | IFF_NO_PI;  /* Mode TUN, sans en‑tête supplémentaire. */
     if (name && name[0])
         strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
 

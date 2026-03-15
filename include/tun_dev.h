@@ -1,8 +1,11 @@
 /**
- * tun_dev.h - TUN 虚拟网卡操作接口
+ * tun_dev.h - Interface d’accès au périphérique réseau virtuel TUN.
  *
- * 负责打开/读/写 Linux TUN 设备，与内核交换 IP 包。
- * 内核把要发出的包写入 TUN，本模块读出；本模块写入 TUN 的包会被内核当作“网卡收到”。
+ * Responsable de l’ouverture, de la lecture et de l’écriture sur un
+ * périphérique TUN Linux pour échanger des paquets IP avec le noyau.
+ * Les paquets que le noyau veut émettre sont écrits dans TUN et lus par
+ * ce module ; les paquets écrits par ce module dans TUN sont vus par le
+ * noyau comme reçus par une carte réseau.
  */
 
 #ifndef TUN_DEV_H
@@ -11,33 +14,33 @@
 #include <stdint.h>
 
 /**
- * 打开并配置 TUN 设备
- * @param name 设备名，如 "tun0"
- * @return     成功返回文件描述符 (>=0)，失败返回 -1
+ * Ouvre et configure un périphérique TUN.
+ * @param name nom de l’interface, par ex. "tun0"
+ * @return     descripteur de fichier (>= 0) en cas de succès, -1 en cas d’échec
  */
 int tun_open(const char *name);
 
 /**
- * 从 TUN 读取一个 IP 包（阻塞）
- * @param fd     tun_open 返回的描述符
- * @param buf    缓冲区，需至少 MAX_FRAME_PAYLOAD 字节
- * @param maxlen 缓冲区大小
- * @return       成功返回读取的字节数，失败返回 -1
+ * Lit un paquet IP depuis TUN (appel bloquant).
+ * @param fd     descripteur retourné par tun_open
+ * @param buf    tampon, doit faire au moins MAX_FRAME_PAYLOAD octets
+ * @param maxlen taille du tampon
+ * @return       nombre d’octets lus, ou -1 en cas d’échec
  */
 int tun_read(int fd, uint8_t *buf, int maxlen);
 
 /**
- * 向 TUN 写入一个 IP 包（注入到内核）
- * @param fd   tun_open 返回的描述符
- * @param buf  IP 包数据
- * @param len  包长度
- * @return     成功返回写入字节数，失败返回 -1
+ * Écrit un paquet IP dans TUN (injection vers le noyau).
+ * @param fd   descripteur retourné par tun_open
+ * @param buf  données du paquet IP
+ * @param len  longueur du paquet
+ * @return     nombre d’octets écrits, ou -1 en cas d’échec
  */
 int tun_write(int fd, const uint8_t *buf, int len);
 
 /**
- * 关闭 TUN 设备
- * @param fd tun_open 返回的描述符
+ * Ferme le périphérique TUN.
+ * @param fd descripteur retourné par tun_open
  */
 void tun_close(int fd);
 

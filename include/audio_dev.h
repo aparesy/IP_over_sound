@@ -1,8 +1,10 @@
 /**
- * audio_dev.h - 声卡设备接口（基于 PortAudio）
+ * audio_dev.h - Interface d’accès à la carte son (basée sur PortAudio).
  *
- * 负责初始化声卡、写入采样到扬声器、从麦克风读取采样。
- * 采样率为 common.h 中的 SAMPLE_RATE，数据类型为 sample_t (float)。
+ * Responsable de l’initialisation de la carte son, de l’écriture d’échantillons
+ * vers le haut‑parleur et de la lecture d’échantillons depuis le microphone.
+ * La fréquence d’échantillonnage est SAMPLE_RATE (définie dans common.h),
+ * avec un type de données sample_t (float).
  */
 
 #ifndef AUDIO_DEV_H
@@ -10,39 +12,41 @@
 
 #include "common.h"
 
-/** 音频设备句柄，内部为 PortAudio 流指针，对外不透明 */
+/** Handle audio ; encapsule les pointeurs de flux PortAudio, reste opaque à l’extérieur. */
 typedef void* audio_handle_t;
 
 /**
- * 初始化音频：打开默认输入/输出设备，按 SAMPLE_RATE 和 AUDIO_FRAMES_PER_BUFFER 配置
- * @return 成功返回句柄，失败返回 NULL
+ * Initialise l’audio : ouvre les périphériques d’entrée et de sortie par défaut
+ * en les configurant selon SAMPLE_RATE et AUDIO_FRAMES_PER_BUFFER.
+ * @return handle en cas de succès, NULL en cas d’échec
  */
 audio_handle_t audio_init(void);  
-/** 初始化音频设备，打开默认输入/输出设备，按 SAMPLE_RATE 和 AUDIO_FRAMES_PER_BUFFER 配置
-/**这个audio_init函数定义在audio_dev.c文件中，函数返回一个audio_handle_t类型的句柄，用于后续的音频操作。*/
+/** La fonction audio_init est définie dans audio_dev.c et renvoie un handle
+ *  de type audio_handle_t pour les opérations audio ultérieures. */
 
 /**
- * 向扬声器写入一帧采样（播放）
- * @param h      audio_init 返回的句柄
- * @param buf    采样数据，长度为 nframes
- * @param nframes 本帧采样数
- * @return       0 成功，非 0 失败
+ * Écrit une trame d’échantillons vers le haut‑parleur (lecture audio).
+ * @param h       handle retourné par audio_init
+ * @param buf     données d’échantillons, de longueur nframes
+ * @param nframes nombre d’échantillons dans cette trame
+ * @return        0 en cas de succès, non‑zéro en cas d’échec
  */
 int audio_write(audio_handle_t h, const sample_t *buf, int nframes);
-/**这个const sample_t *buf表示输入的采样数据，int nframes表示本帧采样数，const是常量指针，表示buf指向的内存地址不能被修改。*/
+/** Le paramètre const sample_t *buf représente les données d’échantillons
+ *  en entrée, int nframes le nombre d’échantillons de la trame. */
 
 /**
- * 从麦克风读取一帧采样（录音）
- * @param h      audio_init 返回的句柄
- * @param buf    输出缓冲区，至少 nframes 个 sample_t
- * @param nframes 要读取的采样数
- * @return       实际读取的采样数，失败返回 <0
+ * Lit une trame d’échantillons depuis le microphone (enregistrement).
+ * @param h       handle retourné par audio_init
+ * @param buf     tampon de sortie, au moins nframes éléments de type sample_t
+ * @param nframes nombre d’échantillons à lire
+ * @return        nombre réel d’échantillons lus, ou < 0 en cas d’échec
  */
 int audio_read(audio_handle_t h, sample_t *buf, int nframes);
 
 /**
- * 关闭音频设备并释放资源
- * @param h audio_init 返回的句柄
+ * Ferme les périphériques audio et libère les ressources associées.
+ * @param h handle retourné par audio_init
  */
 void audio_cleanup(audio_handle_t h);
 

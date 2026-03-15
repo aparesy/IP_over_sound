@@ -1,5 +1,5 @@
 /**
- * wav_writer.c - 将 float 采样写入 WAV 文件（16-bit PCM）
+ * wav_writer.c - Écrit des échantillons float dans un fichier WAV (PCM 16 bits).
  */
 
 #include "wav_writer.h"
@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 
-/* WAV 格式：RIFF + fmt + data，16-bit PCM 单声道 */
+/* Format WAV : RIFF + fmt + data, PCM 16 bits mono. */
 static int write_wav_header(FILE *fp, int nsamples)
 {
     uint8_t riff[4] = { 'R', 'I', 'F', 'F' };

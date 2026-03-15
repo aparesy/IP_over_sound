@@ -1,8 +1,9 @@
 /**
- * audio_dev.c - 声卡设备实现（PortAudio）
+ * audio_dev.c - Implémentation de l’accès à la carte son via PortAudio.
  *
- * 使用 PortAudio 打开默认输入/输出设备，按 SAMPLE_RATE 和
- * AUDIO_FRAMES_PER_BUFFER 进行读写。编译需链接 -lportaudio。
+ * Utilise PortAudio pour ouvrir les périphériques d’entrée/sortie par défaut
+ * et effectuer les lectures/écritures selon SAMPLE_RATE et
+ * AUDIO_FRAMES_PER_BUFFER. L’édition doit être liée avec -lportaudio.
  */
 
 #include "audio_dev.h"
@@ -11,17 +12,20 @@
 #include <stdio.h>
 #include <portaudio.h>
 
-/** 在PortAudio的API中，一帧是一个时间点所有通道的采样，和链接层的帧不是一回事。*/
+/** Dans l’API PortAudio, une “frame” est l’ensemble des échantillons de tous
+ *  les canaux à un instant donné ; cela n’a rien à voir avec une trame de
+ *  couche liaison. */
 
-/** 内部句柄：保存 PaStream 指针 */
+/** Handle interne : stocke les pointeurs PaStream. */
 struct audio_handle {
-    PaStream *stream_in;   /* 麦克风输入流 */
-    PaStream *stream_out;  /* 扬声器输出流 */
-    int opened;            /* 是否已成功打开 */
+    PaStream *stream_in;   /* Flux d’entrée (microphone). */
+    PaStream *stream_out;  /* Flux de sortie (haut‑parleur). */
+    int opened;            /* Indique si les flux ont été ouverts avec succès. */
 };
 
 
-/** 初始化音频设备，打开默认输入/输出设备，按 SAMPLE_RATE 和 AUDIO_FRAMES_PER_BUFFER 配置 */
+/** Initialise les périphériques audio, ouvre les entrées/sorties par défaut
+ *  et les configure selon SAMPLE_RATE et AUDIO_FRAMES_PER_BUFFER. */
 audio_handle_t audio_init(void)
 {
     struct audio_handle *h;
@@ -39,10 +43,10 @@ audio_handle_t audio_init(void)
         return NULL;
     }
 
-    /* 打开默认输入设备（麦克风） */
+    /* Ouvre le périphérique d’entrée par défaut (microphone). */
     err = Pa_OpenDefaultStream(&h->stream_in,
-                               1,   /* 单声道输入 */
-                               0,   /* 无输出 */
+                               1,   /* Entrée mono. */
+                               0,   /* Pas de sortie. */
                                paFloat32,
                                SAMPLE_RATE,
                                AUDIO_FRAMES_PER_BUFFER,
@@ -54,10 +58,10 @@ audio_handle_t audio_init(void)
         return NULL;
     }
 
-    /* 打开默认输出设备（扬声器） */
+    /* Ouvre le périphérique de sortie par défaut (haut‑parleur). */
     err = Pa_OpenDefaultStream(&h->stream_out,
-                               0,   /* 无输入 */
-                               1,   /* 单声道输出 */
+                               0,   /* Pas d’entrée. */
+                               1,   /* Sortie mono. */
                                paFloat32,
                                SAMPLE_RATE,
                                AUDIO_FRAMES_PER_BUFFER,
@@ -95,7 +99,7 @@ audio_handle_t audio_init(void)
     return (audio_handle_t)h;
 }
 
-/** 写入nframes个采样到扬声器 */
+/** Écrit nframes échantillons vers le haut‑parleur. */
 int audio_write(audio_handle_t handle, const sample_t *buf, int nframes)
 {
     struct audio_handle *h = (struct audio_handle *)handle;
@@ -112,7 +116,7 @@ int audio_write(audio_handle_t handle, const sample_t *buf, int nframes)
     return 0;
 }
 
-/** 读取nframes个采样从麦克风 */
+/** Lit nframes échantillons depuis le microphone. */
 int audio_read(audio_handle_t handle, sample_t *buf, int nframes)
 {
     struct audio_handle *h = (struct audio_handle *)handle;
@@ -130,7 +134,7 @@ int audio_read(audio_handle_t handle, sample_t *buf, int nframes)
     return (int)n;
 }
 
-/** 关闭音频设备并释放资源 */
+/** Ferme les périphériques audio et libère les ressources. */
 void audio_cleanup(audio_handle_t handle)
 {
     struct audio_handle *h = (struct audio_handle *)handle;

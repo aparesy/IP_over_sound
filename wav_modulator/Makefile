@@ -1,5 +1,5 @@
-# wav_modulator: 比特流 -> FSK 调制 -> WAV 文件
-# 依赖上级目录的 include/ 和 src/modem.c
+# wav_modulator : flux de bits -> modulation FSK -> fichier WAV
+# Dépend de include/ et de src/modem.c dans le répertoire parent.
 
 CC = gcc
 CFLAGS = -Wall -Wextra -I.. -I../include

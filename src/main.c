@@ -1,11 +1,13 @@
 /**
- * main.c - IP over Sound 程序入口与线程调度
+ * main.c - Point d’entrée du programme IP over Sound et gestion des threads.
  *
- * 流程：
- * 1. 打开 TUN、初始化音频、创建调制/解调器
- * 2. 启动 TX 线程：TUN 读 -> 封装 -> 调制 -> 音频写
- * 3. 启动 RX 线程：音频读 -> 解调 -> 找帧/解封装 -> TUN 写
- * 4. 主线程等待 Ctrl+C 或信号后清理退出
+ * Flux global :
+ * 1. Ouvrir le périphérique TUN, initialiser l’audio, créer les modems TX/RX.
+ * 2. Démarrer le thread TX : lecture depuis TUN -> encapsulation en trames
+ *    -> modulation -> écriture vers la carte son.
+ * 3. Démarrer le thread RX : lecture audio -> démodulation -> recherche de trames
+ *    / décapsulation -> écriture dans TUN.
+ * 4. Le thread principal attend Ctrl+C ou un signal, puis nettoie et quitte.
  */
 
 #include "common.h"
@@ -22,7 +24,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
-/* 全局运行标志：收到 SIGINT 时置 0，各线程退出 */
+/* Indicateur global d’exécution : mis à 0 lors de la réception de SIGINT,
+ * ce qui provoque la sortie de tous les threads. */
 static volatile int g_running = 1;
 
 static void signal_handler(int sig)
@@ -32,8 +35,9 @@ static void signal_handler(int sig)
 }
 
 /**
- * 将一帧字节转为比特流（每字节 8 比特，高位在前）
- * 用于调制前把 frame 转为 modem_tx_modulate 需要的 bits 数组
+ * Convertit une trame octet par octet en flux de bits (8 bits par octet,
+ * bit de poids fort en premier).
+ * Sert à transformer `frame` en tableau de bits pour modem_tx_modulate.
  */
 static void frame_to_bits(const uint8_t *frame, int frame_len, uint8_t *bits_out, int *nbits_out)
 {
@@ -53,7 +57,8 @@ static void frame_to_bits(const uint8_t *frame, int frame_len, uint8_t *bits_out
 }
 
 /**
- * TX 线程：从 TUN 读取 IP 包 -> 封装成帧 -> 调制 -> 写入扬声器
+ * Thread TX : lit des paquets IP depuis TUN -> les encapsule en trames
+ * -> les module -> écrit les échantillons vers le haut‑parleur.
  */
 static void *tx_thread_func(void *arg)
 {
@@ -64,12 +69,12 @@ static void *tx_thread_func(void *arg)
     sample_t *samples_buf;
     int frame_len, nbits, nsamples, i, written;
     modem_tx_handle_t mod_tx;
-    audio_handle_t audio = NULL;  /* 由 main 传入更佳，此处简化用全局或参数 */
+    audio_handle_t audio = NULL;  /* Idéalement passé depuis main, ici simplifié via une variable globale/paramètre. */
     const size_t max_samples = (size_t)(MAX_FRAME_LEN * 8) * SAMPLES_PER_BIT;
 
     ip_buf    = (uint8_t *)malloc(MAX_FRAME_PAYLOAD);
     frame_buf = (uint8_t *)malloc(MAX_FRAME_LEN);
-    bits_buf  = (uint8_t *)malloc(MAX_FRAME_LEN + 1);  /* 按字节存比特 */
+    bits_buf  = (uint8_t *)malloc(MAX_FRAME_LEN + 1);  /* Stocke les bits regroupés par octet. */
     samples_buf = (sample_t *)malloc(max_samples * sizeof(sample_t));
     mod_tx    = modem_tx_create();
 
@@ -83,7 +88,8 @@ static void *tx_thread_func(void *arg)
         return NULL;
     }
 
-    /* 从 main 传过来的参数里拿到 audio 和 tun_fd；这里用全局/静态简化，见下方 */
+    /* Récupère audio et tun_fd depuis les paramètres/main ; ici simplifié
+     * avec une variable globale/statique (voir plus bas). */
     extern audio_handle_t g_audio_handle;
     audio = g_audio_handle;
 
@@ -99,7 +105,7 @@ static void *tx_thread_func(void *arg)
         nsamples = modem_tx_modulate(mod_tx, bits_buf, nbits, samples_buf);
         if (nsamples <= 0) continue;
 
-        /* 按块写入声卡，避免一次写太多 */
+        /* Écrit vers la carte son par blocs pour éviter des écritures trop grosses. */
         for (i = 0; i < nsamples && g_running; i += AUDIO_FRAMES_PER_BUFFER) {
             written = (nsamples - i) < AUDIO_FRAMES_PER_BUFFER ? (nsamples - i) : AUDIO_FRAMES_PER_BUFFER;
             if (audio_write(audio, samples_buf + i, written) != 0)
@@ -115,11 +121,13 @@ static void *tx_thread_func(void *arg)
     return NULL;
 }
 
-/** 接收端比特缓冲：需累积多块解调结果才能凑齐一帧 */
+/** Tampon de bits côté réception : il faut accumuler plusieurs blocs démodulés
+ *  pour reconstituer une trame complète. */
 #define RX_BIT_BUF_BYTES  (MAX_FRAME_LEN * 4)
 #define RX_BIT_BUF_BITS   (RX_BIT_BUF_BYTES * 8)
 
-/** 从比特流中取出一段转为字节（用于将找到的帧从 bits 转为 frame_buf） */
+/** Extrait une portion de flux de bits et la convertit en octets (pour
+ *  reconstituer une trame dans frame_buf à partir de bits). */
 static void bits_to_bytes(const uint8_t *bits, int bit_start, int nbytes, uint8_t *bytes_out)
 {
     int by, b, bi;
@@ -133,7 +141,8 @@ static void bits_to_bytes(const uint8_t *bits, int bit_start, int nbytes, uint8_
     }
 }
 
-/** 将 src 的 nbits 比特追加到 dest，从 dest_bit_count 位置开始；返回新的 dest 总比特数 */
+/** Ajoute nbits bits de src à dest à partir de dest_bit_count, et
+ *  retourne le nouveau nombre total de bits dans dest. */
 static int bits_append(uint8_t *dest, int dest_bit_count, const uint8_t *src, int nbits)
 {
     int i;
@@ -148,7 +157,8 @@ static int bits_append(uint8_t *dest, int dest_bit_count, const uint8_t *src, in
     return dest_bit_count + nbits;
 }
 
-/** 从 buf 中移除 [from_bit, from_bit+n_bits) 的比特，将后面的数据前移 */
+/** Supprime dans buf les bits de l’intervalle [from_bit, from_bit+n_bits)
+ *  et décale le reste vers l’avant. */
 static void bits_remove(uint8_t *buf, int *bit_count_inout, int from_bit, int n_bits)
 {
     int new_count = *bit_count_inout - n_bits;
@@ -170,17 +180,19 @@ static void bits_remove(uint8_t *buf, int *bit_count_inout, int from_bit, int n_
 }
 
 /**
- * RX 线程：从麦克风读采样 -> 解调成比特 -> 累积 -> 找同步 -> 解封装 -> 写 TUN
+ * Thread RX : lit les échantillons depuis le microphone -> démodule en bits
+ * -> accumule les bits -> cherche la synchronisation de trame -> décapsule
+ * et écrit le paquet IP résultant dans TUN.
  */
 static void *rx_thread_func(void *arg)
 {
     int tun_fd = *(int *)arg;
     sample_t *audio_buf;
-    uint8_t *demod_buf;   /* 本次解调得到的一小块比特 */
-    uint8_t *rx_bits_buf; /* 累积的比特流 */
+    uint8_t *demod_buf;   /* Petit bloc de bits obtenu à chaque démodulation. */
+    uint8_t *rx_bits_buf; /* Flux de bits accumulé. */
     uint8_t *frame_buf;
     uint8_t *payload_buf;
-    int rx_bit_count = 0; /* 当前累积的有效比特数 */
+    int rx_bit_count = 0; /* Nombre actuel de bits valides accumulés. */
     int nread, nbits, sync_pos, payload_len;
     int frame_byte_len, frame_len_bits;
     modem_rx_handle_t mod_rx;
@@ -215,24 +227,25 @@ static void *rx_thread_func(void *arg)
         nbits = modem_rx_demodulate(mod_rx, audio_buf, nread, demod_buf, RX_BIT_BUF_BITS);
         if (nbits <= 0) continue;
 
-        /* 追加到累积缓冲区 */
+        /* Ajoute ce bloc de bits au tampon accumulé. */
         if (rx_bit_count + nbits > RX_BIT_BUF_BITS) {
-            /* 缓冲区满，丢弃前半部分以腾出空间 */
+            /* Tampon plein : on jette la première moitié pour libérer de la place. */
             bits_remove(rx_bits_buf, &rx_bit_count, 0, rx_bit_count / 2);
         }
         rx_bit_count = bits_append(rx_bits_buf, rx_bit_count, demod_buf, nbits);
 
-        /* 在累积的比特流中找同步 */
+        /* Recherche de la synchronisation dans le flux de bits accumulé. */
         sync_pos = protocol_find_sync(rx_bits_buf, rx_bit_count);
         if (sync_pos < 0) continue;
 
-        /* 需要至少 FRAME_HEADER_LEN 才能读长度字段 */
+        /* Il faut au moins FRAME_HEADER_LEN pour pouvoir lire le champ longueur. */
         if (sync_pos + FRAME_HEADER_LEN * 8 > rx_bit_count) continue;
 
         bits_to_bytes(rx_bits_buf, sync_pos, FRAME_HEADER_LEN, frame_buf);
         frame_byte_len = (frame_buf[SYNC_LEN] << 8) | frame_buf[SYNC_LEN + 1];
         if (frame_byte_len <= 0 || frame_byte_len > MAX_FRAME_PAYLOAD) {
-            /* 非法长度，丢弃同步字前的比特避免死锁 */
+            /* Longueur invalide : on jette les bits jusqu’à la fin des SYNC
+             * pour éviter un blocage. */
             bits_remove(rx_bits_buf, &rx_bit_count, 0, sync_pos + SYNC_LEN * 8);
             continue;
         }
@@ -245,7 +258,7 @@ static void *rx_thread_func(void *arg)
         if (payload_len > 0)
             tun_write(tun_fd, payload_buf, payload_len);
 
-        /* 消费掉这一帧对应的比特 */
+        /* Consomme les bits correspondant à cette trame. */
         bits_remove(rx_bits_buf, &rx_bit_count, sync_pos, frame_len_bits);
     }
 
@@ -258,7 +271,8 @@ static void *rx_thread_func(void *arg)
     return NULL;
 }
 
-/* 全局音频句柄，供 TX/RX 线程使用（也可用参数传递） */
+/* Handle audio global utilisé par les threads TX/RX (pourrait aussi être passé
+ * en paramètre). */
 audio_handle_t g_audio_handle = NULL;
 
 int main(int argc, char *argv[])

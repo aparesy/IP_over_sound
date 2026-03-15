@@ -1,8 +1,10 @@
 /**
- * protocol.h - 帧封装与解析（链路层）
+ * protocol.h - Encapsulation et décapsulage de trames (couche liaison).
  *
- * 发送：给 IP 包加帧头（同步字 + 长度）+ 帧尾（CRC），得到一帧字节流
- * 接收：从比特流中找同步字、取长度、校验 CRC，拆出 IP 包
+ * Envoi   : ajoute un en‑tête de trame (SYNC + longueur) et une queue (CRC)
+ *           autour d’un paquet IP pour obtenir un flux d’octets structuré.
+ * Réception : recherche le mot de synchronisation dans le flux de bits,
+ *             lit la longueur, vérifie le CRC et extrait le paquet IP.
  */
 
 #ifndef PROTOCOL_H
@@ -13,30 +15,33 @@
 #include <stddef.h>  /* size_t */
 
 /**
- * 将 IP 包封装为一帧（同步 + 长度 + 载荷 + CRC），输出为字节数组
- * @param payload    IP 包数据
- * @param payload_len 包长度
- * @param frame_out  输出缓冲区，至少 FRAME_HEADER_LEN + payload_len + CRC_BYTES
- * @return           输出帧的总字节数，失败返回 0
+ * Encapsule un paquet IP dans une trame (SYNC + longueur + charge utile + CRC),
+ * produisant un tableau d’octets.
+ * @param payload      données du paquet IP
+ * @param payload_len  longueur du paquet
+ * @param frame_out    tampon de sortie, taille au moins FRAME_HEADER_LEN + payload_len + CRC_BYTES
+ * @return             longueur totale de la trame produite, ou 0 en cas d’échec
  */
 int protocol_encapsulate(const uint8_t *payload, int payload_len, uint8_t *frame_out);
 
 /**
- * 从字节流中解析一帧：找同步字、读长度、校验 CRC，拆出载荷
- * @param frame     一帧完整数据（含头+载荷+CRC）
- * @param frame_len 帧长度
- * @param payload_out 输出载荷（IP 包）缓冲区
- * @param max_payload  缓冲区最大长度
- * @return          成功返回载荷字节数，失败返回 -1（如 CRC 错误）
+ * Extrait une trame depuis un flux d’octets : cherche la synchronisation,
+ * lit la longueur, vérifie le CRC et restitue la charge utile.
+ * @param frame        trame complète (en‑tête + charge utile + CRC)
+ * @param frame_len    longueur de la trame
+ * @param payload_out  tampon de sortie pour la charge utile (paquet IP)
+ * @param max_payload  taille maximale du tampon de sortie
+ * @return             nombre d’octets de charge utile, ou -1 en cas d’échec (CRC invalide, etc.)
  */
 int protocol_decapsulate(const uint8_t *frame, int frame_len,
                          uint8_t *payload_out, int max_payload);
 
 /**
- * 在比特流中查找帧同步位置（连续 SYNC_LEN 个同步字节的起始比特下标）
- * @param bits    比特数组（每字节 8 比特，高位在前）
- * @param nbits   总比特数
- * @return        同步起始比特下标，未找到返回 -1
+ * Recherche la position de synchronisation dans un flux de bits
+ * (indice du bit de départ d’une séquence de SYNC_LEN octets SYNC_BYTE).
+ * @param bits    tableau de bits (8 bits par octet, bit de poids fort en premier)
+ * @param nbits   nombre total de bits
+ * @return        indice du premier bit de synchro, ou -1 si non trouvé
  */
 int protocol_find_sync(const uint8_t *bits, int nbits);
 
