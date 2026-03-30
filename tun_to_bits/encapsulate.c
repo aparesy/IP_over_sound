@@ -1,5 +1,5 @@
 /**
- * encapsulate.c - 将 IP 包封装成帧（调用 protocol_encapsulate）
+ * encapsulate.c - Encapsule un paquet IP en trame (appelle protocol_encapsulate).
  */
 
 #include "encapsulate.h"

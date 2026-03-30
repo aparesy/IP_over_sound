@@ -1,13 +1,14 @@
 /**
- * tun_to_bits.c - 主程序：同一可执行文件，不同参数独立跑每一步
+ * tun_to_bits.c - Programme principal : un seul exécutable, plusieurs options
+ *                 pour exécuter chaque étape indépendamment.
  *
- * 用法：
- *   tun_to_bits --create [tun_name]  仅创建 TUN，验证成功后退出
- *   tun_to_bits --read [tun_name]    仅从 TUN 读一包，写入 output/ip.bin
- *   tun_to_bits --encapsulate        从 output/ip.bin 封装成帧，写入 output/frame.bin
- *   tun_to_bits --to-bits            从 output/frame.bin 转比特，写入 output/bits.bin
- *   tun_to_bits --test               测试模式：内置/testdata IP → 帧 → 比特（不依赖 TUN）
- *   tun_to_bits [tun_name]           全流程：创建 TUN → 读包 → 封装 → 转比特（需 root）
+ * Usage :
+ *   tun_to_bits --create [tun_name]  Crée uniquement TUN, vérifie et quitte
+ *   tun_to_bits --read [tun_name]    Lit un paquet depuis TUN -> output/ip.bin
+ *   tun_to_bits --encapsulate        output/ip.bin -> encapsulation -> output/frame.bin
+ *   tun_to_bits --to-bits            output/frame.bin -> bits -> output/bits.bin
+ *   tun_to_bits --test               Test : IP intégré/testdata -> trame -> bits (sans TUN)
+ *   tun_to_bits [tun_name]           Chaîne complète : créer TUN -> lire -> encapsuler -> bits (root requis)
  */
 
 #include "../include/common.h"
@@ -47,7 +48,7 @@ static void print_usage(const char *prog)
     fprintf(stderr, "  %s [tun_name]            Full pipeline (create -> read -> encapsulate -> to-bits)\n", prog);
 }
 
-/** 步骤 1：仅创建 TUN，验证成功 */
+/** Étape 1 : créer uniquement TUN et vérifier. */
 static int run_create(int argc, char *argv[])
 {
     const char *tun_name = (argc >= 3) ? argv[2] : TUN_DEV_NAME;
@@ -61,7 +62,7 @@ static int run_create(int argc, char *argv[])
     return 0;
 }
 
-/** 步骤 2：仅从 TUN 读一包，写入 output/ip.bin */
+/** Étape 2 : lire un paquet depuis TUN et l’écrire dans output/ip.bin. */
 static int run_read(int argc, char *argv[])
 {
     uint8_t ip_buf[MAX_FRAME_PAYLOAD];
@@ -95,7 +96,7 @@ static int run_read(int argc, char *argv[])
     return 0;
 }
 
-/** 步骤 3：从 output/ip.bin 封装成帧，写入 output/frame.bin */
+/** Étape 3 : encapsuler output/ip.bin en trame, écrire output/frame.bin. */
 static int run_encapsulate(void)
 {
     uint8_t ip_buf[MAX_FRAME_PAYLOAD];
@@ -133,7 +134,7 @@ static int run_encapsulate(void)
     return 0;
 }
 
-/** 步骤 4：从 output/frame.bin 转比特，写入 output/bits.bin */
+/** Étape 4 : convertir output/frame.bin en bits, écrire output/bits.bin. */
 static int run_to_bits(void)
 {
     uint8_t frame_buf[MAX_FRAME_LEN];
@@ -167,7 +168,7 @@ static int run_to_bits(void)
     return 0;
 }
 
-/** 测试模式：内置/testdata IP -> 封装 -> 转比特，打印并写 output/ */
+/** Mode test : IP intégré/testdata -> encapsulation -> bits, affiche et écrit dans output/. */
 static int run_test(void)
 {
     uint8_t ip_buf[MAX_FRAME_PAYLOAD];
@@ -239,7 +240,7 @@ static int run_test(void)
     return 0;
 }
 
-/** 全流程：创建 TUN -> 读包 -> 封装 -> 转比特 */
+/** Chaîne complète : créer TUN -> lire -> encapsuler -> convertir en bits. */
 static int run_full(int argc, char *argv[])
 {
     uint8_t ip_buf[MAX_FRAME_PAYLOAD];
@@ -271,10 +272,10 @@ static int run_full(int argc, char *argv[])
 
     frame_to_bits(frame_buf, frame_len, bits_buf, &nbits);
 
-    printf("\n========== 帧结果 (Frame) ==========\n");
+    printf("\n========== Résultat trame (Frame) ==========\n");
     print_hex("Frame (hex)", frame_buf, frame_len);
 
-    printf("\n========== 比特流 (Bits, 前 64 字节 hex) ==========\n");
+    printf("\n========== Flux de bits (Bits, 64 premiers octets en hex) ==========\n");
     {
         int show = (nbits + 7) / 8;
         if (show > 64) show = 64;
@@ -310,6 +311,6 @@ int main(int argc, char *argv[])
         return run_test() == 0 ? 0 : 1;
     }
 
-    /* 无 -- 前缀则当作全流程，第一个参数为 tun_name */
+    /* Sans préfixe -- : exécute la chaîne complète, le 1er argument est tun_name. */
     return run_full(argc, argv) == 0 ? 0 : 1;
 }

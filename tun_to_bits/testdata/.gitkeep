@@ -1,1 +1,2 @@
-# 可选：将 ip_packet.bin 放于此目录，--test 时会优先读取（否则使用内置测试包）
+# Optionnel : placez ip_packet.bin dans ce répertoire ; en mode --test il sera
+# lu en priorité (sinon le paquet de test intégré est utilisé).

@@ -1,6 +1,6 @@
-# IP over Sound - 自动化编译
-# 依赖: libportaudio-dev (Ubuntu: sudo apt install libportaudio2 libportaudiocpp0 libportaudio-dev)
-# 若已安装，可用 pkg-config 获取 PortAudio 编译/链接选项
+# IP over Sound - Compilation automatisée
+# Dépendances : libportaudio-dev (Ubuntu : sudo apt install libportaudio2 libportaudiocpp0 libportaudio-dev)
+# Si déjà installé, pkg-config peut fournir les options de compilation/édition de liens PortAudio
 
 CC     = gcc
 CFLAGS = -Wall -Wextra -g -I include $(shell pkg-config --cflags portaudio-2.0 2>/dev/null || echo "")

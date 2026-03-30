@@ -1,11 +1,14 @@
 /**
- * bits_to_wav.c - 比特流 → FSK 调制 → WAV 文件
+ * bits_to_wav.c - Flux de bits -> modulation FSK -> fichier WAV
  *
- * 用法：
- *   bits_to_wav <input.bin> <output.wav>  从文件读比特流，调制后写 WAV
- *   bits_to_wav --test                    内置测试：生成短比特流，写入 output/test.wav
+ * Usage :
+ *   bits_to_wav <input.bin> <output.wav>  Lit un flux de bits depuis un fichier,
+ *                                         module et écrit un WAV
+ *   bits_to_wav --test                    Test intégré : génère un flux de bits,
+ *                                         écrit output/test.wav
  *
- * 比特流文件格式：原始字节，每字节 8 比特，高位先发（与 modem 约定一致）。
+ * Format du fichier de bits : octets bruts, 8 bits par octet, bit de poids fort
+ * en premier (même convention que le modem).
  */
 
 #include "../include/common.h"
@@ -30,7 +33,7 @@ static int read_bits_from_file(const char *path, uint8_t *bits_out, int max_byte
     return 0;
 }
 
-/** 内置测试：写入较长比特流，调制后写 output/test.wav */
+/** Test intégré : génère un flux de bits assez long, module et écrit output/test.wav. */
 static int run_test(void)
 {
 #define TEST_BITS_BUF_SIZE  1024
@@ -42,18 +45,20 @@ static int run_test(void)
     modem_tx_handle_t mod_tx;
     const char *out_path = "output/test.wav";
 
-    /* 原短测试比特流（已注释）：
+    /* Ancien flux de test court (commenté) :
      * bits_buf[0] = 0x7E;
      * bits_buf[1] = 0x7E;
      * bits_buf[2] = 0x00;
      * nbits = 24;
      */
 
-    /* 新的长测试比特流：同步头 + 重复模式，共 TEST_BITS_BUF_SIZE 字节 */
+    /* Nouveau flux de test long : en‑tête de synchro + motif répété,
+     * total TEST_BITS_BUF_SIZE octets. */
     bits_buf[0] = 0x7E;
     bits_buf[1] = 0x7E;
     for (i = 2; i < TEST_BITS_BUF_SIZE; i++) {
-        /* 交替 0x55/0xAA 使高低频交替，便于听出节奏；中间穿插 0x00/0xFF */
+        /* Alterne 0x55/0xAA pour faire alterner basse/haute fréquence,
+         * afin d’entendre un rythme ; insère aussi 0x00/0xFF entre deux. */
         if (i % 4 == 2) bits_buf[i] = 0x55;
         else if (i % 4 == 3) bits_buf[i] = 0xAA;
         else if (i % 4 == 0) bits_buf[i] = 0x00;
@@ -112,7 +117,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    max_bytes = 1024 * 1024; /* 最多 1MB 比特流文件 */
+    max_bytes = 1024 * 1024; /* Fichier de bits : 1 Mo max. */
     bits_buf = (uint8_t *)malloc(max_bytes);
     if (!bits_buf) {
         fprintf(stderr, "malloc bits_buf failed\n");

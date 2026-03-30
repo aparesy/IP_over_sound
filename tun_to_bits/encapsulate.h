@@ -1,5 +1,6 @@
 /**
- * encapsulate.h - 将 IP 包封装成帧（同步字 + 长度 + 载荷 + CRC）
+ * encapsulate.h - Encapsule un paquet IP dans une trame
+ * (mot de synchronisation + longueur + charge utile + CRC).
  */
 
 #ifndef ENCAPSULATE_H
@@ -8,11 +9,11 @@
 #include <stdint.h>
 
 /**
- * 把 IP 包封装为一帧
- * @param ip_payload  IP 包数据
- * @param ip_len      包长度
- * @param frame_out   输出帧缓冲区（需足够大，见 common.h MAX_FRAME_LEN）
- * @return            输出帧的字节数，失败返回 0
+ * Encapsule un paquet IP dans une trame.
+ * @param ip_payload données du paquet IP
+ * @param ip_len     longueur du paquet
+ * @param frame_out  tampon de sortie de la trame (doit être assez grand, voir common.h MAX_FRAME_LEN)
+ * @return           nombre d’octets de la trame produite, 0 en cas d’échec
  */
 int encapsulate(const uint8_t *ip_payload, int ip_len, uint8_t *frame_out);
 

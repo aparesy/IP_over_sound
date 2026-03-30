@@ -1,15 +1,16 @@
 /**
- * tun_create.h - 创建 TUN 设备
- * 封装项目 tun_dev 的 tun_open，在本模块中作为独立“创建 TUN”一步。
+ * tun_create.h - Création d’un périphérique TUN.
+ * Encapsule tun_dev::tun_open pour en faire une étape « créer TUN » distincte
+ * dans ce module.
  */
 
 #ifndef TUN_CREATE_H
 #define TUN_CREATE_H
 
 /**
- * 创建并绑定 TUN 设备
- * @param name 设备名，如 "tun0"
- * @return     成功返回文件描述符 (>=0)，失败返回 -1
+ * Crée et attache un périphérique TUN.
+ * @param name nom de l’interface, par ex. "tun0"
+ * @return     descripteur de fichier (>=0) en cas de succès, -1 en cas d’échec
  */
 int tun_create(const char *name);
 

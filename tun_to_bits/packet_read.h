@@ -1,5 +1,5 @@
 /**
- * packet_read.h - 从 TUN 读一个 IP 包到缓冲区
+ * packet_read.h - Lit un paquet IP depuis TUN dans un tampon.
  */
 
 #ifndef PACKET_READ_H
@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 /**
- * 从 TUN 设备读一个 IP 包（阻塞）
- * @param fd     TUN 文件描述符（由 tun_create 返回）
- * @param buf    输出缓冲区
- * @param maxlen 缓冲区最大字节数
- * @return       成功返回读到的字节数，失败返回 -1
+ * Lit un paquet IP depuis un périphérique TUN (bloquant).
+ * @param fd     descripteur TUN (retourné par tun_create)
+ * @param buf    tampon de sortie
+ * @param maxlen taille maximale du tampon en octets
+ * @return       nombre d’octets lus, ou -1 en cas d’échec
  */
 int packet_read(int fd, uint8_t *buf, int maxlen);
 

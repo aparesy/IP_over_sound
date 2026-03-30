@@ -1,5 +1,6 @@
 /**
- * frame_to_bits.c - 将一帧字节转为比特流（每字节 8 比特，高位在前）
+ * frame_to_bits.c - Convertit une trame (octets) en flux de bits
+ * (8 bits par octet, bit de poids fort en premier).
  */
 
 #include "frame_to_bits.h"

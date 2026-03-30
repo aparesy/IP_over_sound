@@ -1,5 +1,6 @@
-# tun_to_bits: 四步独立模块（创建 TUN、读包、封装成帧、帧转比特）+ 主程序串联
-# 依赖上级 include/ 与 src/tun_dev.c, src/protocol.c, src/utils.c
+# tun_to_bits : module en 4 étapes (créer TUN, lire paquet, encapsuler en trame,
+# puis convertir trame -> bits) + enchaînement via le programme principal.
+# Dépend de include/ et de src/tun_dev.c, src/protocol.c, src/utils.c du répertoire parent.
 
 CC = gcc
 CFLAGS = -Wall -Wextra -I.. -I../include

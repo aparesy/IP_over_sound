@@ -1,5 +1,5 @@
 /**
- * tun_create.c - 创建 TUN 设备（调用 tun_dev 的 tun_open）
+ * tun_create.c - Création d’un périphérique TUN (appelle tun_dev::tun_open).
  */
 
 #include "tun_create.h"

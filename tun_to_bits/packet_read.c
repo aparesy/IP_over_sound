@@ -1,5 +1,6 @@
 /**
- * packet_read.c - 从 TUN 读一个 IP 包到缓冲区（调用 tun_dev 的 tun_read）
+ * packet_read.c - Lit un paquet IP depuis TUN dans un tampon
+ * (appelle tun_dev::tun_read).
  */
 
 #include "packet_read.h"
